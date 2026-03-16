@@ -24,8 +24,9 @@ Last updated: 2026-03-16
 以下は実験ブランチ上の作業。main には未マージ。
 
 - **PersonaCore** — `src/persona/core.py` (observe, reflect, context — LLM抽象化済み)
+- **PersonaState** — `src/persona/state.py` (フェーズ判定、関心事、summary生成 — Memory読み取り専用)
 - **Bluesky client** — `src/persona/bluesky.py` (タイムライン取得、投稿 — 外部アダプター)
-- **Test suite** — 92 tests passing (benchmark: 39, memory: 21, core: 20, bluesky: 12)
+- **Test suite** — 115 tests passing (benchmark: 39, memory: 21, core: 20, state: 23, bluesky: 12)
 
 ## Persona Implementation Progress
 
@@ -33,12 +34,11 @@ Last updated: 2026-03-16
 |------|-------------|--------|--------|
 | 1 | SQLite memory module | Done | main |
 | 2 | PersonaCore (brain) | Done | experiment |
-| 3 | Bluesky client (adapter) | Done | experiment |
-| 4 | Internal state model | Not started | — |
+| 3 | PersonaState (internal state) | Done | experiment |
+| 4 | Bluesky client (adapter) | Done | experiment |
 | 5 | Local execution loop (CLI) | Not started | — |
 | 6 | LLM adapter (Claude API) | Not started | — |
 | 7 | launchd schedule | Not started | — |
-| 8 | Phase transition detector | Not started | — |
 
 ## Active Machine
 
