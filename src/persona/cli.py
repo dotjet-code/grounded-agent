@@ -2,11 +2,11 @@
 
 Usage:
     python -m src.persona run --input observed.txt
-    python -m src.persona run              # reads from stdin
+    python -m src.persona run --llm claude --input observed.txt
+    python -m src.persona run              # reads from stdin, stub LLM
     python -m src.persona status           # show internal state summary
 
-No network, no LLM API calls by default.
-Uses a stub LLM that echoes observations unless --llm is specified later.
+Default LLM is 'stub' (no network). Use '--llm claude' for real inference.
 """
 
 from __future__ import annotations
@@ -43,10 +43,20 @@ def _build_memory(db_path: Path, diary_dir: Path) -> Memory:
     return Memory(db_path=db_path, diary_dir=diary_dir)
 
 
+def _resolve_llm(name: str) -> LlmCall:
+    """Resolve LLM adapter by name."""
+    if name == "stub":
+        return _stub_llm
+    if name == "claude":
+        from src.persona.llm import make_claude_llm
+        return make_claude_llm()
+    raise ValueError(f"Unknown LLM adapter: {name!r}. Choose 'stub' or 'claude'.")
+
+
 def cmd_run(args: argparse.Namespace) -> None:
     """Run one observe → reflect cycle."""
     memory = _build_memory(Path(args.db), Path(args.diary_dir))
-    llm: LlmCall = _stub_llm
+    llm = _resolve_llm(args.llm)
     core = PersonaCore(memory, llm)
 
     # Read input texts
@@ -108,6 +118,10 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = sub.add_parser("run", help="Run one observe → reflect cycle")
     run_parser.add_argument(
         "--input", "-i", default=None, help="Path to input text file (default: stdin)",
+    )
+    run_parser.add_argument(
+        "--llm", default="stub", choices=["stub", "claude"],
+        help="LLM adapter: 'stub' (offline) or 'claude' (requires ANTHROPIC_API_KEY)",
     )
 
     sub.add_parser("status", help="Show persona internal state")

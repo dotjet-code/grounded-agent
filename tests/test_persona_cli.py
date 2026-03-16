@@ -57,6 +57,16 @@ class TestParser:
         args = parser.parse_args(["run", "-i", "file.txt"])
         assert args.input == "file.txt"
 
+    def test_default_llm_is_stub(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run"])
+        assert args.llm == "stub"
+
+    def test_llm_claude(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--llm", "claude"])
+        assert args.llm == "claude"
+
     def test_status_command(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["status"])
