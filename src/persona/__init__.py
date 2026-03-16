@@ -2,5 +2,6 @@
 
 from src.persona.core import PersonaCore
 from src.persona.memory import Memory
+from src.persona.state import PersonaState
 
-__all__ = ["Memory", "PersonaCore"]
+__all__ = ["Memory", "PersonaCore", "PersonaState"]
