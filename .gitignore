@@ -10,3 +10,6 @@ htmlcov/
 .venv/
 
 .claude/projects/
+
+# Persona runtime data (generated locally, not tracked)
+data/memory.db

@@ -40,7 +40,9 @@ As of 2026-03-16, the primary goal is building an autonomous persona system. Ben
 
 ## 10. Experiment Branch for Persona Core
 
-PersonaCore (`src/persona/core.py`) and Bluesky client (`src/persona/bluesky.py`) are developed on the `feat/persona-bluesky-exp` branch. These are not merged to main until validated. The memory module (`src/persona/memory.py`) is stable and lives on main.
+PersonaCore, PersonaState, persona CLI, Bluesky client は全て `feat/persona-bluesky-exp` ブランチで開発。main にはバリデーション後にマージする。Memory module (`src/persona/memory.py`) は安定しており main に存在する。
+
+persona CLI はスタブLLMで動作し、ネットワーク不要でローカル実行可能。LLMアダプターを差し替えることで本番化する設計。
 
 ## 11. External Channels Are Adapters
 
