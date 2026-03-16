@@ -6,9 +6,10 @@ import argparse
 import sys
 from datetime import datetime, timezone
 
-from src.config import MACHINES, WORKFLOWS
+from src.config import MACHINES, SESSIONS_DIR, WORKFLOWS
 from src.logger.session_logger import list_sessions, save_session
 from src.models import Session, new_session_id, now_iso
+from src.report.generator import generate_report
 
 
 def _prompt(label: str, default: str = "") -> str:
@@ -126,6 +127,8 @@ def main() -> None:
 
     sub.add_parser("record", help="Record a benchmark session")
 
+    sub.add_parser("report", help="Generate Markdown benchmark report")
+
     list_parser = sub.add_parser("list", help="List recorded sessions")
     list_parser.add_argument("--workflow", choices=WORKFLOWS, default=None)
     list_parser.add_argument("--task", default=None)
@@ -137,6 +140,8 @@ def main() -> None:
             cmd_record(args)
         elif args.command == "list":
             cmd_list(args)
+        elif args.command == "report":
+            print(generate_report(str(SESSIONS_DIR)))
         else:
             parser.print_help()
             sys.exit(1)
