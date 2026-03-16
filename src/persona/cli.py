@@ -83,6 +83,9 @@ def cmd_run(args: argparse.Namespace) -> None:
     print(f"  Vocabulary added: {result['vocabulary_added']}")
     print(f"  Curiosity added: {result['curiosity_added']}")
 
+    if getattr(args, "verbose", False) and result["raw_response"]:
+        print(f"\n[LLM raw response]\n{result['raw_response']}\n[/LLM raw response]")
+
     # Reflect
     diary = core.reflect()
     print(f"\nDiary entry written.")
@@ -122,6 +125,10 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "--llm", default="stub", choices=["stub", "claude"],
         help="LLM adapter: 'stub' (offline) or 'claude' (requires ANTHROPIC_API_KEY)",
+    )
+    run_parser.add_argument(
+        "--verbose", "-v", action="store_true",
+        help="Show raw LLM response for debugging",
     )
 
     sub.add_parser("status", help="Show persona internal state")

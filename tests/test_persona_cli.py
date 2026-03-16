@@ -67,6 +67,21 @@ class TestParser:
         args = parser.parse_args(["run", "--llm", "claude"])
         assert args.llm == "claude"
 
+    def test_verbose_flag(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--verbose"])
+        assert args.verbose is True
+
+    def test_verbose_short_flag(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "-v"])
+        assert args.verbose is True
+
+    def test_default_no_verbose(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run"])
+        assert args.verbose is False
+
     def test_status_command(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["status"])

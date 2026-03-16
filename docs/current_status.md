@@ -25,9 +25,10 @@ Last updated: 2026-03-16
 
 - **PersonaCore** — `src/persona/core.py` (observe, reflect, context — LLM抽象化済み)
 - **PersonaState** — `src/persona/state.py` (フェーズ判定、関心事、summary生成 — Memory読み取り専用)
-- **Persona CLI** — `src/persona/cli.py` (ローカル実行: `run` で観察→日記、`status` で内部状態表示)
+- **Persona CLI** — `src/persona/cli.py` (ローカル実行: `run --llm stub/claude`, `status`)
+- **LLM adapter** — `src/persona/llm.py` (Claude Haiku 4.5、環境変数で認証、`--llm claude` で有効化)
 - **Bluesky client** — `src/persona/bluesky.py` (タイムライン取得、投稿 — 外部アダプター)
-- **Test suite** — 130 tests passing (benchmark: 39, memory: 21, core: 20, state: 23, cli: 15, bluesky: 12)
+- **Test suite** — 140 tests passing (benchmark: 39, memory: 21, core: 20, state: 23, cli: 17, llm: 8, bluesky: 12)
 
 ## Persona Implementation Progress
 
@@ -37,9 +38,10 @@ Last updated: 2026-03-16
 | 2 | PersonaCore (brain) | Done | experiment |
 | 3 | PersonaState (internal state) | Done | experiment |
 | 4 | Persona CLI (local loop) | Done | experiment |
-| 5 | Bluesky client (adapter) | Done | experiment |
-| 6 | LLM adapter (Claude API) | Not started | — |
-| 7 | launchd schedule | Not started | — |
+| 5 | LLM adapter (Claude API) | Done | experiment |
+| 6 | Bluesky client (adapter) | Done | experiment |
+| 7 | End-to-end local test run | Not started | — |
+| 8 | launchd schedule | Not started | — |
 
 ## Active Machine
 
@@ -49,4 +51,4 @@ Last updated: 2026-03-16
 ## Branches
 
 - `main` — stable: benchmark framework + persona design docs + memory module
-- `feat/persona-bluesky-exp` — experimental: PersonaCore, PersonaState, CLI, Bluesky client
+- `feat/persona-bluesky-exp` — experimental: PersonaCore, PersonaState, CLI, LLM adapter, Bluesky client

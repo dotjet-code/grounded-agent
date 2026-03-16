@@ -51,3 +51,7 @@ Bluesky (and any future SNS) is treated as a pluggable adapter, not a core depen
 ## 12. LLM Abstraction
 
 PersonaCore accepts a `Callable[[str, str], str]` for LLM calls. No direct dependency on any specific LLM SDK in the core module. This keeps the core testable without API keys and allows swapping LLM providers freely.
+
+## 13. Claude Haiku as Default Persona LLM
+
+自律ループのデフォルトLLMは Claude Haiku 4.5。月額 $2〜3 で運用可能。CLI の `--llm stub` でオフライン動作、`--llm claude` で本番推論に切り替える。API キーは環境変数 `ANTHROPIC_API_KEY` から読み込み、コードに埋め込まない。

@@ -8,10 +8,16 @@ No direct dependency on any specific LLM SDK or SNS client.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any, Callable
 
 from src.persona.memory import Memory
+
+# Regex to strip common LLM formatting prefixes:
+#   "- VOCAB:", "* VOCAB:", "1. VOCAB:", "**VOCAB:**", "  VOCAB:" etc.
+_PREFIX_NOISE = re.compile(r"^[\s\-\*\d\.]+")
+_BOLD_MARKERS = re.compile(r"\*\*")
 
 # Type alias for the LLM call function.
 # Takes a system prompt and a user message, returns the response text.
@@ -111,16 +117,19 @@ class PersonaCore:
         vocab_count = 0
         curiosity_count = 0
 
-        for line in response.splitlines():
-            line = line.strip()
-            if line.startswith("VOCAB:"):
+        for raw_line in response.splitlines():
+            # Strip markdown/list formatting: "- ", "* ", "1. ", "**", etc.
+            line = _BOLD_MARKERS.sub("", raw_line)
+            line = _PREFIX_NOISE.sub("", line).strip()
+
+            if line.upper().startswith("VOCAB:"):
                 parts = line[6:].split("|", 1)
                 expression = parts[0].strip()
                 context = parts[1].strip() if len(parts) > 1 else ""
                 if expression:
                     self._memory.add_vocabulary(expression, context=context)
                     vocab_count += 1
-            elif line.startswith("CURIOSITY:"):
+            elif line.upper().startswith("CURIOSITY:"):
                 parts = line[10:].split("|", 1)
                 phenomenon = parts[0].strip()
                 notes = parts[1].strip() if len(parts) > 1 else ""

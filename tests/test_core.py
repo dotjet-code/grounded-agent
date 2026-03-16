@@ -133,6 +133,51 @@ class TestObserve:
         assert result["vocabulary_added"] == 1
         assert result["curiosity_added"] == 1
 
+    def test_parses_bullet_prefixed_lines(self, memory: Memory) -> None:
+        response = (
+            "- VOCAB: 草 | funny reaction\n"
+            "- CURIOSITY: people sigh together | morning trains"
+        )
+        core = PersonaCore(memory, _make_llm(response))
+        result = core.observe(["text"])
+        assert result["vocabulary_added"] == 1
+        assert result["curiosity_added"] == 1
+
+    def test_parses_numbered_lines(self, memory: Memory) -> None:
+        response = (
+            "1. VOCAB: エモい | nostalgic\n"
+            "2. CURIOSITY: vending machine politeness | why?"
+        )
+        core = PersonaCore(memory, _make_llm(response))
+        result = core.observe(["text"])
+        assert result["vocabulary_added"] == 1
+        assert result["curiosity_added"] == 1
+
+    def test_parses_bold_markers(self, memory: Memory) -> None:
+        response = "**VOCAB:** それな | agreement"
+        core = PersonaCore(memory, _make_llm(response))
+        result = core.observe(["text"])
+        assert result["vocabulary_added"] == 1
+
+    def test_parses_asterisk_list(self, memory: Memory) -> None:
+        response = "* VOCAB: やばい | versatile exclamation"
+        core = PersonaCore(memory, _make_llm(response))
+        result = core.observe(["text"])
+        assert result["vocabulary_added"] == 1
+
+    def test_parses_case_insensitive(self, memory: Memory) -> None:
+        response = "Vocab: テスト | test word\nCuriosity: pattern | note"
+        core = PersonaCore(memory, _make_llm(response))
+        result = core.observe(["text"])
+        assert result["vocabulary_added"] == 1
+        assert result["curiosity_added"] == 1
+
+    def test_parses_indented_lines(self, memory: Memory) -> None:
+        response = "   VOCAB: ぴえん | sadness expression"
+        core = PersonaCore(memory, _make_llm(response))
+        result = core.observe(["text"])
+        assert result["vocabulary_added"] == 1
+
     def test_no_matches_in_response(self, memory: Memory) -> None:
         response = "Nothing particularly caught my attention today."
         core = PersonaCore(memory, _make_llm(response))
