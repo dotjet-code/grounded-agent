@@ -2,42 +2,50 @@
 
 Last updated: 2026-03-16
 
-## Completed
+## Project Direction
 
-### Benchmark Framework
-- **CLI benchmark logger** — `record`, `list` subcommands for session recording
-- **Markdown report generator** — `report` subcommand with `--save` option
-- **Comparison protocol** — frozen for `report_gen_v1` task (`docs/protocol.md`)
-- **Frozen prompt** — `docs/prompts/report_gen_v1.md`
-- **Project context files** — `PROJECT_OVERVIEW.md`, `docs/decisions.md`, `docs/workflow_for_chatgpt.md`
+**Primary goal:** 成長する自律型AIペルソナを作る。
+**Secondary:** ベンチマーク/ログ/レポートは支援インフラとして残す。ECC比較は当面行わない。
 
-### Persona System (autonomous AI)
-- **Design documents** — `docs/persona/` (growth engine, personality seed, phases, anti-patterns, system prompt, tech stack)
-- **SQLite memory module** — `src/persona/memory.py` (vocabulary notebook, curiosity list, diary, phase detection)
-- **Test suite** — 60 tests passing (benchmark: 39, persona: 21)
+## Completed (main branch)
+
+### Benchmark Framework (support infrastructure)
+- CLI benchmark logger — `record`, `list` subcommands
+- Markdown report generator — `report` subcommand with `--save` option
+- Comparison protocol — frozen for `report_gen_v1` (`docs/protocol.md`)
+- Project context files — `PROJECT_OVERVIEW.md`, `docs/decisions.md`, `docs/workflow_for_chatgpt.md`
+
+### Persona Design (main branch)
+- Design documents — `docs/persona/` (growth engine, personality seed, phases, anti-patterns, system prompt, tech stack)
+- SQLite memory module — `src/persona/memory.py` (vocabulary, curiosity, diary, phase detection)
+
+## Experimental (feat/persona-bluesky-exp branch)
+
+以下は実験ブランチ上の作業。main には未マージ。
+
+- **PersonaCore** — `src/persona/core.py` (observe, reflect, context — LLM抽象化済み)
+- **Bluesky client** — `src/persona/bluesky.py` (タイムライン取得、投稿 — 外部アダプター)
+- **Test suite** — 92 tests passing (benchmark: 39, memory: 21, core: 20, bluesky: 12)
 
 ## Persona Implementation Progress
 
-| Step | Description | Status |
-|------|-------------|--------|
-| 1 | SQLite memory module | Done |
-| 2 | Bluesky client module | Not started |
-| 3 | LLM client module | Not started |
-| 4 | Autonomous loop script | Not started |
-| 5 | launchd schedule | Not started |
-| 6 | Phase transition detector | Not started |
-
-## Recorded Sessions
-
-| Session ID | Workflow | Task | Outcome |
-|------------|----------|------|---------|
-| b8b8a4c59db8 | ecc | scaffold_v1 | success |
+| Step | Description | Status | Branch |
+|------|-------------|--------|--------|
+| 1 | SQLite memory module | Done | main |
+| 2 | PersonaCore (brain) | Done | experiment |
+| 3 | Bluesky client (adapter) | Done | experiment |
+| 4 | Internal state model | Not started | — |
+| 5 | Local execution loop (CLI) | Not started | — |
+| 6 | LLM adapter (Claude API) | Not started | — |
+| 7 | launchd schedule | Not started | — |
+| 8 | Phase transition detector | Not started | — |
 
 ## Active Machine
 
 - **MacBook** — primary development
 - **Mac mini** — inactive, paused
 
-## Branch
+## Branches
 
-All work is on `main`. No feature branches currently active.
+- `main` — stable: benchmark framework + persona design docs + memory module
+- `feat/persona-bluesky-exp` — experimental: PersonaCore + Bluesky client

@@ -33,3 +33,19 @@ As of 2026-03-16, MacBook is the active development machine. Mac mini is paused 
 ## 8. Commit Convention
 
 Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`, `perf:`, `ci:`. No co-author attribution (disabled globally).
+
+## 9. Persona-First Project Direction
+
+As of 2026-03-16, the primary goal is building an autonomous persona system. Benchmark/ECC comparison is secondary support infrastructure. ECC-vs-old comparison is deferred indefinitely.
+
+## 10. Experiment Branch for Persona Core
+
+PersonaCore (`src/persona/core.py`) and Bluesky client (`src/persona/bluesky.py`) are developed on the `feat/persona-bluesky-exp` branch. These are not merged to main until validated. The memory module (`src/persona/memory.py`) is stable and lives on main.
+
+## 11. External Channels Are Adapters
+
+Bluesky (and any future SNS) is treated as a pluggable adapter, not a core dependency. The persona's brain (observe, reflect, context) works without any external channel. SNS integration is connected last, not first.
+
+## 12. LLM Abstraction
+
+PersonaCore accepts a `Callable[[str, str], str]` for LLM calls. No direct dependency on any specific LLM SDK in the core module. This keeps the core testable without API keys and allows swapping LLM providers freely.
