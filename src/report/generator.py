@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src.models import Session
 
 
-def generate_report(sessions_dir: str) -> str:
-    """Read all session JSON files and return a Markdown summary report."""
+def _load_sessions(sessions_dir: str) -> list[Session]:
+    """Read all session JSON files from a directory."""
     directory = Path(sessions_dir)
     sessions: list[Session] = []
-
     if directory.exists():
         for path in sorted(directory.glob("*.json")):
             text = path.read_text(encoding="utf-8")
             sessions.append(Session.from_json(text))
+    return sessions
+
+
+def generate_report(sessions_dir: str) -> str:
+    """Read all session JSON files and return a Markdown summary report."""
+    sessions = _load_sessions(sessions_dir)
 
     lines: list[str] = ["# Benchmark Report", ""]
 
@@ -63,3 +69,48 @@ def generate_report(sessions_dir: str) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
+
+def save_report(sessions_dir: str, reports_dir: str) -> Path:
+    """Generate a report and save it as a timestamped Markdown file.
+
+    The saved file includes a YAML-style metadata header with session IDs,
+    task IDs, and workflows for traceability.
+
+    Returns the path of the saved file.
+    """
+    sessions = _load_sessions(sessions_dir)
+    report_body = generate_report(sessions_dir)
+
+    now = datetime.now(timezone.utc)
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+    filename = f"report_{timestamp}.md"
+
+    # Build metadata header
+    meta_lines: list[str] = [
+        "---",
+        f"generated_at: \"{now.isoformat()}\"",
+        f"sessions_count: {len(sessions)}",
+    ]
+
+    if sessions:
+        session_ids = [s.session_id for s in sessions]
+        meta_lines.append(f"session_ids: {session_ids}")
+
+        task_ids = sorted(set(s.task_id for s in sessions))
+        meta_lines.append(f"task_ids: {task_ids}")
+
+        workflows = sorted(set(s.workflow for s in sessions))
+        meta_lines.append(f"workflows: {workflows}")
+
+    meta_lines.append("---")
+    meta_lines.append("")
+
+    full_content = "\n".join(meta_lines) + report_body
+
+    out_dir = Path(reports_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / filename
+    out_path.write_text(full_content, encoding="utf-8")
+
+    return out_path

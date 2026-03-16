@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from src.models import Session
-from src.report.generator import generate_report
+from src.report.generator import generate_report, save_report
 
 
 # ---------------------------------------------------------------------------
@@ -148,3 +148,71 @@ class TestGenerateReportIgnoresNonJson:
         _write_session(tmp_path, session)
         result = generate_report(str(tmp_path))
         assert "Total sessions: 1" in result
+
+
+# ---------------------------------------------------------------------------
+# save_report
+# ---------------------------------------------------------------------------
+
+
+class TestSaveReport:
+    """save_report should write a timestamped Markdown file with metadata."""
+
+    @pytest.fixture()
+    def saved(self, tmp_path: Path) -> Path:
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        reports_dir = tmp_path / "reports"
+        _write_session(sessions_dir, _make_session())
+        return save_report(str(sessions_dir), str(reports_dir))
+
+    def test_file_exists(self, saved: Path) -> None:
+        assert saved.exists()
+
+    def test_filename_format(self, saved: Path) -> None:
+        assert saved.name.startswith("report_")
+        assert saved.suffix == ".md"
+
+    def test_contains_metadata_header(self, saved: Path) -> None:
+        content = saved.read_text(encoding="utf-8")
+        assert content.startswith("---\n")
+        assert "generated_at:" in content
+        assert "sessions_count: 1" in content
+
+    def test_contains_session_ids(self, saved: Path) -> None:
+        content = saved.read_text(encoding="utf-8")
+        assert "session_ids:" in content
+        assert "aaa111bbb222" in content
+
+    def test_contains_task_ids(self, saved: Path) -> None:
+        content = saved.read_text(encoding="utf-8")
+        assert "task_ids:" in content
+        assert "scaffold_v1" in content
+
+    def test_contains_workflows(self, saved: Path) -> None:
+        content = saved.read_text(encoding="utf-8")
+        assert "workflows:" in content
+        assert "ecc" in content
+
+    def test_contains_report_body(self, saved: Path) -> None:
+        content = saved.read_text(encoding="utf-8")
+        assert "# Benchmark Report" in content
+        assert "Total sessions: 1" in content
+
+    def test_creates_reports_dir(self, tmp_path: Path) -> None:
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        reports_dir = tmp_path / "new_reports"
+        _write_session(sessions_dir, _make_session())
+        path = save_report(str(sessions_dir), str(reports_dir))
+        assert path.exists()
+        assert reports_dir.exists()
+
+    def test_empty_sessions(self, tmp_path: Path) -> None:
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        reports_dir = tmp_path / "reports"
+        path = save_report(str(sessions_dir), str(reports_dir))
+        content = path.read_text(encoding="utf-8")
+        assert "sessions_count: 0" in content
+        assert "# Benchmark Report" in content
