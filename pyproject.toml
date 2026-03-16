@@ -17,6 +17,9 @@ dev = [
     "isort>=5.0",
     "ruff>=0.1.0",
 ]
+persona = [
+    "atproto>=0.0.55",
+]
 
 [project.scripts]
 grounded-agent = "src.__main__:main"
