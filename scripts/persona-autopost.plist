@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.grounded-agent.persona-autopost</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/nakajima/projects/grounded-agent/.venv/bin/python</string>
+        <string>-m</string>
+        <string>src.persona</string>
+        <string>autopost-once</string>
+        <string>--policy</string>
+        <string>data/posting_policy.json</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/nakajima/projects/grounded-agent</string>
+
+    <!-- Interval in seconds: 14400 = 4 hours (production) -->
+    <!-- Change to 300 (5 min) for testing -->
+    <key>StartInterval</key>
+    <integer>14400</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/nakajima/projects/grounded-agent/data/logs/autopost.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/nakajima/projects/grounded-agent/data/logs/autopost.stderr.log</string>
+
+    <!-- Environment variables loaded from .env via wrapper if needed -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <!-- Set these before loading the plist, or use install-schedule.sh -->
+        <!-- <key>ANTHROPIC_API_KEY</key><string>sk-...</string> -->
+        <!-- <key>X_API_KEY</key><string>...</string> -->
+        <!-- <key>X_API_KEY_SECRET</key><string>...</string> -->
+        <!-- <key>X_ACCESS_TOKEN</key><string>...</string> -->
+        <!-- <key>X_ACCESS_TOKEN_SECRET</key><string>...</string> -->
+    </dict>
+
+    <!-- Run even if machine was asleep at scheduled time -->
+    <key>StartCalendarInterval</key>
+    <false/>
+</dict>
+</plist>

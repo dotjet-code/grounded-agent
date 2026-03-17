@@ -14,3 +14,5 @@ htmlcov/
 # Persona runtime data (generated locally, not tracked)
 data/memory.db
 data/outbox.db
+data/logs/
+data/.env
