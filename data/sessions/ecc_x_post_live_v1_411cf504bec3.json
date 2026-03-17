@@ -1,0 +1,17 @@
+{
+  "session_id": "411cf504bec3",
+  "workflow": "ecc",
+  "task_id": "x_post_live_v1",
+  "machine": "macbook",
+  "started_at": "2026-03-17T11:40:14.490592+00:00",
+  "ended_at": "2026-03-17T11:40:15.536379+00:00",
+  "duration_seconds": 1.0,
+  "outcome": "success",
+  "error_count": 0,
+  "errors": [],
+  "human_interventions": 5,
+  "files_created": 0,
+  "tests_passed": 212,
+  "tests_failed": 0,
+  "notes": "Experimental branch work: cooldown guard worked, dry-run succeeded, and a real X post succeeded from persona CLI."
+}
