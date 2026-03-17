@@ -1,10 +1,11 @@
-"""Persona CLI: local execution of observe/reflect cycles.
+"""Persona CLI: local execution of observe/reflect/post cycles.
 
 Usage:
     python -m src.persona run --input observed.txt
     python -m src.persona run --llm claude --input observed.txt
-    python -m src.persona run              # reads from stdin, stub LLM
-    python -m src.persona status           # show internal state summary
+    python -m src.persona post --llm claude       # compose + safety + post to Bluesky
+    python -m src.persona post --dry-run           # compose + safety, no actual post
+    python -m src.persona status                   # show internal state summary
 
 Default LLM is 'stub' (no network). Use '--llm claude' for real inference.
 """
@@ -12,16 +13,21 @@ Default LLM is 'stub' (no network). Use '--llm claude' for real inference.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
+from src.persona.compose import PostComposer
 from src.persona.core import LlmCall, PersonaCore
 from src.persona.memory import Memory
+from src.persona.outbox import Outbox, SafetyGuard
 from src.persona.state import PersonaState
 
 # Default paths
 _DEFAULT_DB = Path("data/memory.db")
 _DEFAULT_DIARY = Path("data/diary")
+_DEFAULT_OUTBOX_DB = Path("data/outbox.db")
+_DEFAULT_STOP_FILE = Path("data/STOP")
 
 
 def _stub_llm(system: str, user: str) -> str:
@@ -104,6 +110,64 @@ def cmd_status(args: argparse.Namespace) -> None:
     memory.close()
 
 
+def cmd_post(args: argparse.Namespace) -> None:
+    """Compose a post, run safety checks, and post to Bluesky."""
+    memory = _build_memory(Path(args.db), Path(args.diary_dir))
+    state = PersonaState(memory)
+    llm = _resolve_llm(args.llm)
+    outbox = Outbox(db_path=Path(args.outbox_db))
+    guard = SafetyGuard(outbox=outbox, stop_file=Path(args.stop_file))
+
+    # 1. Compose
+    composer = PostComposer(state, llm)
+    candidate = composer.compose()
+    print(f"Composed: {candidate}")
+
+    # 2. Safety check
+    passed, reason = guard.check(candidate)
+    if not passed:
+        outbox_id = outbox.save(candidate, status="blocked", block_reason=reason)
+        print(f"Blocked: {reason} (outbox #{outbox_id})")
+        memory.close()
+        outbox.close()
+        return
+
+    # 3. Save to outbox as ready
+    outbox_id = outbox.save(candidate, status="ready")
+
+    # 4. Dry run check
+    if args.dry_run:
+        print(f"Dry run — saved to outbox #{outbox_id}, not posted.")
+        memory.close()
+        outbox.close()
+        return
+
+    # 5. Post to Bluesky
+    try:
+        from src.persona.bluesky import BlueskyClient
+
+        bsky_handle = os.environ.get("BLUESKY_HANDLE", "")
+        bsky_password = os.environ.get("BLUESKY_APP_PASSWORD", "")
+        if not bsky_handle or not bsky_password:
+            raise RuntimeError(
+                "BLUESKY_HANDLE and BLUESKY_APP_PASSWORD must be set"
+            )
+
+        client = BlueskyClient()
+        client.login(bsky_handle, bsky_password)
+        uri = client.create_post(candidate)
+
+        outbox.mark_posted(outbox_id, uri)
+        print(f"Posted: {uri} (outbox #{outbox_id})")
+
+    except Exception as exc:
+        outbox.mark_failed(outbox_id, str(exc))
+        print(f"Failed: {exc} (outbox #{outbox_id})", file=sys.stderr)
+
+    memory.close()
+    outbox.close()
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser for the persona CLI."""
     parser = argparse.ArgumentParser(
@@ -131,6 +195,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show raw LLM response for debugging",
     )
 
+    post_parser = sub.add_parser("post", help="Compose and post to Bluesky")
+    post_parser.add_argument(
+        "--llm", default="stub", choices=["stub", "claude"],
+        help="LLM adapter: 'stub' (offline) or 'claude' (requires ANTHROPIC_API_KEY)",
+    )
+    post_parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Compose and check safety, but do not actually post",
+    )
+    post_parser.add_argument(
+        "--outbox-db", default=str(_DEFAULT_OUTBOX_DB),
+        help="Path to outbox SQLite database",
+    )
+    post_parser.add_argument(
+        "--stop-file", default=str(_DEFAULT_STOP_FILE),
+        help="Path to emergency stop file",
+    )
+
     sub.add_parser("status", help="Show persona internal state")
 
     return parser
@@ -143,6 +225,8 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "run":
         cmd_run(args)
+    elif args.command == "post":
+        cmd_post(args)
     elif args.command == "status":
         cmd_status(args)
     else:

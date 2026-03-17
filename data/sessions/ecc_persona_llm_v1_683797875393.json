@@ -1,0 +1,17 @@
+{
+  "session_id": "683797875393",
+  "workflow": "ecc",
+  "task_id": "persona_llm_v1",
+  "machine": "macbook",
+  "started_at": "2026-03-16T08:52:18.996525+00:00",
+  "ended_at": "2026-03-16T08:52:20.700383+00:00",
+  "duration_seconds": 1.7,
+  "outcome": "success",
+  "error_count": 0,
+  "errors": [],
+  "human_interventions": 5,
+  "files_created": 2,
+  "tests_passed": 140,
+  "tests_failed": 0,
+  "notes": "Experimental branch work: added Claude/stub LLM adapter switching for persona CLI."
+}
