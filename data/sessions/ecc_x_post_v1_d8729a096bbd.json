@@ -1,0 +1,17 @@
+{
+  "session_id": "d8729a096bbd",
+  "workflow": "ecc",
+  "task_id": "x_post_v1",
+  "machine": "macbook",
+  "started_at": "2026-03-17T09:15:36.450947+00:00",
+  "ended_at": "2026-03-17T09:15:40.076763+00:00",
+  "duration_seconds": 3.6,
+  "outcome": "success",
+  "error_count": 0,
+  "errors": [],
+  "human_interventions": 5,
+  "files_created": 0,
+  "tests_passed": 203,
+  "tests_failed": 0,
+  "notes": "Experimental branch work: first real X post succeeded from persona CLI."
+}
