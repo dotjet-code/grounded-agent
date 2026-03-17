@@ -79,3 +79,30 @@ class BlueskyClient:
 
         response = self._client.send_post(text=text, langs=["ja"])
         return response.uri
+
+
+class BlueskyAdapter:
+    """PostPlatform-compatible adapter wrapping BlueskyClient.
+
+    Reads credentials from environment variables.
+    """
+
+    name: str = "bluesky"
+    max_length: int = 300
+
+    def __init__(self) -> None:
+        self._client = BlueskyClient()
+
+    def login(self) -> str:
+        import os
+
+        handle = os.environ.get("BLUESKY_HANDLE", "")
+        password = os.environ.get("BLUESKY_APP_PASSWORD", "")
+        if not handle or not password:
+            raise RuntimeError(
+                "Missing environment variables: BLUESKY_HANDLE, BLUESKY_APP_PASSWORD"
+            )
+        return self._client.login(handle, password)
+
+    def post(self, text: str) -> str:
+        return self._client.create_post(text)

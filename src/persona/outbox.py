@@ -144,12 +144,14 @@ class SafetyGuard:
         max_daily: int = DEFAULT_MAX_DAILY,
         cooldown_minutes: int = DEFAULT_COOLDOWN_MINUTES,
         forbidden_words: tuple[str, ...] = DEFAULT_FORBIDDEN_WORDS,
+        max_length: int = BLUESKY_MAX_LENGTH,
     ) -> None:
         self._outbox = outbox
         self._stop_file = Path(stop_file)
         self._max_daily = max_daily
         self._cooldown_minutes = cooldown_minutes
         self._forbidden_words = forbidden_words
+        self._max_length = max_length
 
     def check(self, candidate: str) -> tuple[bool, str]:
         """Run all safety checks. Returns (passed, reason).
@@ -177,9 +179,9 @@ class SafetyGuard:
         return True, ""
 
     def _check_length(self, candidate: str) -> tuple[bool, str]:
-        """Check Bluesky character limit."""
-        if len(candidate) > BLUESKY_MAX_LENGTH:
-            return False, f"too long: {len(candidate)} > {BLUESKY_MAX_LENGTH}"
+        """Check platform character limit."""
+        if len(candidate) > self._max_length:
+            return False, f"too long: {len(candidate)} > {self._max_length}"
         return True, ""
 
     def _check_forbidden(self, candidate: str) -> tuple[bool, str]:

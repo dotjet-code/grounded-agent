@@ -111,17 +111,32 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 
 def cmd_post(args: argparse.Namespace) -> None:
-    """Compose a post, run safety checks, and post to Bluesky."""
+    """Compose a post, run safety checks, and post to the target platform."""
+    from src.persona.platform import resolve_platform
+
     memory = _build_memory(Path(args.db), Path(args.diary_dir))
     state = PersonaState(memory)
     llm = _resolve_llm(args.llm)
     outbox = Outbox(db_path=Path(args.outbox_db))
-    guard = SafetyGuard(outbox=outbox, stop_file=Path(args.stop_file))
+
+    # Resolve platform for max_length
+    platform_name = args.platform
+    try:
+        platform = resolve_platform(platform_name)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    guard = SafetyGuard(
+        outbox=outbox,
+        stop_file=Path(args.stop_file),
+        max_length=platform.max_length,
+    )
 
     # 1. Compose
     composer = PostComposer(state, llm)
     candidate = composer.compose()
-    print(f"Composed: {candidate}")
+    print(f"Composed ({platform_name}): {candidate}")
 
     # 2. Safety check
     passed, reason = guard.check(candidate)
@@ -142,24 +157,12 @@ def cmd_post(args: argparse.Namespace) -> None:
         outbox.close()
         return
 
-    # 5. Post to Bluesky
+    # 5. Post to platform
     try:
-        from src.persona.bluesky import BlueskyClient
-
-        bsky_handle = os.environ.get("BLUESKY_HANDLE", "")
-        bsky_password = os.environ.get("BLUESKY_APP_PASSWORD", "")
-        if not bsky_handle or not bsky_password:
-            raise RuntimeError(
-                "BLUESKY_HANDLE and BLUESKY_APP_PASSWORD must be set"
-            )
-
-        client = BlueskyClient()
-        client.login(bsky_handle, bsky_password)
-        uri = client.create_post(candidate)
-
+        platform.login()
+        uri = platform.post(candidate)
         outbox.mark_posted(outbox_id, uri)
         print(f"Posted: {uri} (outbox #{outbox_id})")
-
     except Exception as exc:
         outbox.mark_failed(outbox_id, str(exc))
         print(f"Failed: {exc} (outbox #{outbox_id})", file=sys.stderr)
@@ -195,7 +198,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show raw LLM response for debugging",
     )
 
-    post_parser = sub.add_parser("post", help="Compose and post to Bluesky")
+    post_parser = sub.add_parser("post", help="Compose and post to a platform")
+    post_parser.add_argument(
+        "--platform", default="x", choices=["x", "bluesky"],
+        help="Target platform: 'x' or 'bluesky'",
+    )
     post_parser.add_argument(
         "--llm", default="stub", choices=["stub", "claude"],
         help="LLM adapter: 'stub' (offline) or 'claude' (requires ANTHROPIC_API_KEY)",
