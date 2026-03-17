@@ -153,6 +153,23 @@ class SafetyGuard:
         self._forbidden_words = forbidden_words
         self._max_length = max_length
 
+    def pre_check(self) -> tuple[bool, str]:
+        """Run pre-compose checks (no candidate text needed).
+
+        Checks: emergency stop, daily cap, cooldown.
+        Call this before LLM compose to avoid wasting API calls.
+        """
+        passed, reason = self._check_emergency_stop("")
+        if not passed:
+            return False, reason
+        passed, reason = self._check_daily_cap("")
+        if not passed:
+            return False, reason
+        passed, reason = self._check_cooldown("")
+        if not passed:
+            return False, reason
+        return True, "pre-checks passed"
+
     def check(self, candidate: str) -> tuple[bool, str]:
         """Run all safety checks. Returns (passed, reason).
 

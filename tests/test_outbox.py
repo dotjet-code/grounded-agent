@@ -279,3 +279,38 @@ class TestFullCheck:
         passed, reason = guard.check("x" * 999)
         assert not passed
         assert "emergency stop" in reason  # not "too long"
+
+
+# ---------------------------------------------------------------------------
+# SafetyGuard: pre_check
+# ---------------------------------------------------------------------------
+
+
+class TestPreCheck:
+    def test_passes_when_clear(self, guard: SafetyGuard) -> None:
+        passed, reason = guard.pre_check()
+        assert passed
+        assert "pre-checks passed" in reason
+
+    def test_blocks_emergency_stop(self, tmp_path: Path, outbox: Outbox) -> None:
+        stop_file = tmp_path / "STOP"
+        stop_file.write_text("stop")
+        guard = SafetyGuard(outbox=outbox, stop_file=stop_file)
+        passed, reason = guard.pre_check()
+        assert not passed
+        assert "emergency stop" in reason
+
+    def test_blocks_daily_cap(self, guard: SafetyGuard, outbox: Outbox) -> None:
+        for i in range(3):  # max_daily=3
+            r = outbox.save(f"post {i}")
+            outbox.mark_posted(r, f"uri{i}")
+        passed, reason = guard.pre_check()
+        assert not passed
+        assert "daily cap" in reason
+
+    def test_blocks_cooldown(self, guard: SafetyGuard, outbox: Outbox) -> None:
+        r = outbox.save("recent")
+        outbox.mark_posted(r, "uri")
+        passed, reason = guard.pre_check()
+        assert not passed
+        assert "cooldown" in reason
