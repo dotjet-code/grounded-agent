@@ -11,6 +11,10 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.persona.policy import PostingPolicy
 
 _OUTBOX_SCHEMA = """\
 CREATE TABLE IF NOT EXISTS outbox (
@@ -145,6 +149,8 @@ class SafetyGuard:
         cooldown_minutes: int = DEFAULT_COOLDOWN_MINUTES,
         forbidden_words: tuple[str, ...] = DEFAULT_FORBIDDEN_WORDS,
         max_length: int = BLUESKY_MAX_LENGTH,
+        quiet_start_hour: int | None = None,
+        quiet_end_hour: int | None = None,
     ) -> None:
         self._outbox = outbox
         self._stop_file = Path(stop_file)
@@ -152,14 +158,38 @@ class SafetyGuard:
         self._cooldown_minutes = cooldown_minutes
         self._forbidden_words = forbidden_words
         self._max_length = max_length
+        self._quiet_start = quiet_start_hour
+        self._quiet_end = quiet_end_hour
+
+    @classmethod
+    def from_policy(
+        cls,
+        outbox: Outbox,
+        policy: "PostingPolicy",
+        stop_file: str | Path = "data/STOP",
+        max_length: int = BLUESKY_MAX_LENGTH,
+    ) -> "SafetyGuard":
+        """Create a SafetyGuard initialized from a PostingPolicy."""
+        return cls(
+            outbox=outbox,
+            stop_file=stop_file,
+            max_daily=policy.max_daily,
+            cooldown_minutes=policy.cooldown_minutes,
+            max_length=max_length,
+            quiet_start_hour=policy.quiet_start_hour,
+            quiet_end_hour=policy.quiet_end_hour,
+        )
 
     def pre_check(self) -> tuple[bool, str]:
         """Run pre-compose checks (no candidate text needed).
 
-        Checks: emergency stop, daily cap, cooldown.
+        Checks: emergency stop, quiet hours, daily cap, cooldown.
         Call this before LLM compose to avoid wasting API calls.
         """
         passed, reason = self._check_emergency_stop("")
+        if not passed:
+            return False, reason
+        passed, reason = self._check_quiet_hours()
         if not passed:
             return False, reason
         passed, reason = self._check_daily_cap("")
@@ -193,6 +223,24 @@ class SafetyGuard:
         """Check if emergency stop file exists."""
         if self._stop_file.exists():
             return False, f"emergency stop: {self._stop_file} exists"
+        return True, ""
+
+    def _check_quiet_hours(self) -> tuple[bool, str]:
+        """Check if current time is within quiet hours."""
+        if self._quiet_start is None or self._quiet_end is None:
+            return True, ""
+        if self._quiet_start == self._quiet_end:
+            return True, ""
+
+        hour = datetime.now(timezone.utc).hour
+        if self._quiet_start > self._quiet_end:
+            # Wraps midnight: e.g. 23-7
+            is_quiet = hour >= self._quiet_start or hour < self._quiet_end
+        else:
+            is_quiet = self._quiet_start <= hour < self._quiet_end
+
+        if is_quiet:
+            return False, f"quiet hours: {self._quiet_start}:00-{self._quiet_end}:00 UTC"
         return True, ""
 
     def _check_length(self, candidate: str) -> tuple[bool, str]:

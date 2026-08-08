@@ -314,3 +314,32 @@ class TestPreCheck:
         passed, reason = guard.pre_check()
         assert not passed
         assert "cooldown" in reason
+
+    def test_blocks_quiet_hours(self, tmp_path: Path, outbox: Outbox) -> None:
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+        # Set quiet hours to include current hour
+        guard = SafetyGuard(
+            outbox=outbox,
+            stop_file=tmp_path / "STOP",
+            quiet_start_hour=now.hour,
+            quiet_end_hour=(now.hour + 2) % 24,
+        )
+        passed, reason = guard.pre_check()
+        assert not passed
+        assert "quiet hours" in reason
+
+    def test_passes_outside_quiet_hours(self, tmp_path: Path, outbox: Outbox) -> None:
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+        # Set quiet hours to NOT include current hour
+        guard = SafetyGuard(
+            outbox=outbox,
+            stop_file=tmp_path / "STOP",
+            quiet_start_hour=(now.hour + 6) % 24,
+            quiet_end_hour=(now.hour + 8) % 24,
+        )
+        passed, reason = guard.pre_check()
+        assert passed

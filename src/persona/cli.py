@@ -174,7 +174,7 @@ def cmd_post(args: argparse.Namespace) -> None:
 def cmd_autopost_once(args: argparse.Namespace) -> None:
     """Guarded single-post cycle for autonomous operation.
 
-    1. Pre-check (STOP, cooldown, daily cap) — before LLM call
+    1. Pre-check (STOP, quiet hours, cooldown, daily cap) — before LLM call
     2. Compose post via LLM
     3. Full safety check on candidate
     4. Post to platform
@@ -187,19 +187,24 @@ def cmd_autopost_once(args: argparse.Namespace) -> None:
         3 = blocked by post-check (normal, not an error)
     """
     from src.persona.platform import resolve_platform
+    from src.persona.policy import PostingPolicy
+
+    # Load policy
+    policy = PostingPolicy.from_json(args.policy)
 
     memory = _build_memory(Path(args.db), Path(args.diary_dir))
     outbox = Outbox(db_path=Path(args.outbox_db))
 
-    platform_name = args.platform
+    platform_name = args.platform or policy.platform
     try:
         platform = resolve_platform(platform_name)
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    guard = SafetyGuard(
+    guard = SafetyGuard.from_policy(
         outbox=outbox,
+        policy=policy,
         stop_file=Path(args.stop_file),
         max_length=platform.max_length,
     )
@@ -213,8 +218,11 @@ def cmd_autopost_once(args: argparse.Namespace) -> None:
         sys.exit(2)
 
     # 2. Compose
+    from src.persona.safety import with_call_budget
+
     state = PersonaState(memory)
-    llm = _resolve_llm(args.llm)
+    llm_name = args.llm or policy.llm
+    llm = with_call_budget(_resolve_llm(llm_name), max_calls=4)
     composer = PostComposer(state, llm)
     candidate = composer.compose()
     print(f"Composed ({platform_name}): {candidate}")
@@ -300,12 +308,16 @@ def build_parser() -> argparse.ArgumentParser:
         "autopost-once", help="Guarded single-post cycle (for cron/launchd)",
     )
     auto_parser.add_argument(
-        "--platform", default="x", choices=["x", "bluesky"],
-        help="Target platform: 'x' or 'bluesky'",
+        "--policy", default="data/posting_policy.json",
+        help="Path to posting policy JSON file",
     )
     auto_parser.add_argument(
-        "--llm", default="claude", choices=["stub", "claude"],
-        help="LLM adapter (default: claude for autonomous use)",
+        "--platform", default=None, choices=["x", "bluesky"],
+        help="Target platform (overrides policy file)",
+    )
+    auto_parser.add_argument(
+        "--llm", default=None, choices=["stub", "claude"],
+        help="LLM adapter (overrides policy file)",
     )
     auto_parser.add_argument(
         "--outbox-db", default=str(_DEFAULT_OUTBOX_DB),
@@ -331,7 +343,15 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "post":
         cmd_post(args)
     elif args.command == "autopost-once":
-        cmd_autopost_once(args)
+        from src.persona.safety import RunGuard
+
+        with RunGuard() as guard:
+            try:
+                cmd_autopost_once(args)
+                guard.finish(0)
+            except SystemExit as e:
+                guard.finish(int(e.code or 0))
+                raise
     elif args.command == "status":
         cmd_status(args)
     else:

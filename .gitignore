@@ -16,3 +16,8 @@ data/memory.db
 data/outbox.db
 data/logs/
 data/.env
+data/env
+data/env.*
+data/*.save
+data/state/
+data/STOP

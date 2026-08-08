@@ -22,11 +22,19 @@ from src.persona.outbox import Outbox
 
 @pytest.fixture()
 def env(tmp_path: Path) -> dict[str, str]:
+    # Create a test policy with no quiet hours
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(
+        '{"max_daily": 6, "cooldown_minutes": 0, '
+        '"quiet_start_hour": 0, "quiet_end_hour": 0, '
+        '"platform": "x", "llm": "stub"}'
+    )
     return {
         "db": str(tmp_path / "memory.db"),
         "diary_dir": str(tmp_path / "diary"),
         "outbox_db": str(tmp_path / "outbox.db"),
         "stop_file": str(tmp_path / "STOP"),
+        "policy": str(policy_path),
     }
 
 
@@ -35,10 +43,12 @@ def _auto_args(env: dict, **overrides) -> list[str]:
         "--db", env["db"],
         "--diary-dir", env["diary_dir"],
         "autopost-once",
+        "--policy", env["policy"],
         "--outbox-db", env["outbox_db"],
         "--stop-file", env["stop_file"],
-        "--llm", overrides.get("llm", "stub"),
     ]
+    if "llm" in overrides:
+        args.extend(["--llm", overrides["llm"]])
     if "platform" in overrides:
         args.extend(["--platform", overrides["platform"]])
     return args
@@ -117,14 +127,27 @@ class TestAutopostOncePreCheck:
             main(_auto_args(env))
         assert exc_info.value.code == 2
 
-    def test_cooldown_skips(self, env: dict, capsys) -> None:
+    def test_cooldown_skips(self, env: dict, tmp_path: Path, capsys) -> None:
+        # Create a policy with long cooldown
+        policy = tmp_path / "cooldown_policy.json"
+        policy.write_text(
+            '{"max_daily": 6, "cooldown_minutes": 9999, '
+            '"quiet_start_hour": 0, "quiet_end_hour": 0, '
+            '"platform": "x", "llm": "stub"}'
+        )
+
         outbox = Outbox(db_path=env["outbox_db"])
         r = outbox.save("recent post")
         outbox.mark_posted(r, "uri")
         outbox.close()
 
+        args = _auto_args(env)
+        # Replace policy path
+        idx = args.index("--policy")
+        args[idx + 1] = str(policy)
+
         with pytest.raises(SystemExit) as exc_info:
-            main(_auto_args(env))
+            main(args)
         assert exc_info.value.code == 2
 
         captured = capsys.readouterr()
@@ -186,14 +209,16 @@ class TestAutopostOnceFailure:
 
 
 class TestAutopostOnceDefaults:
-    def test_default_llm_is_claude(self) -> None:
+    def test_default_llm_is_none_from_cli(self) -> None:
+        """CLI default is None; policy provides the actual default."""
         from src.persona.cli import build_parser
         parser = build_parser()
         args = parser.parse_args(["autopost-once"])
-        assert args.llm == "claude"
+        assert args.llm is None  # resolved from policy at runtime
 
-    def test_default_platform_is_x(self) -> None:
+    def test_default_platform_is_none_from_cli(self) -> None:
+        """CLI default is None; policy provides the actual default."""
         from src.persona.cli import build_parser
         parser = build_parser()
         args = parser.parse_args(["autopost-once"])
-        assert args.platform == "x"
+        assert args.platform is None  # resolved from policy at runtime

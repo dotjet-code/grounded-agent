@@ -1,0 +1,8 @@
+{
+  "max_daily": 4,
+  "cooldown_minutes": 180,
+  "quiet_start_hour": 15,
+  "quiet_end_hour": 21,
+  "platform": "x",
+  "llm": "claude"
+}
